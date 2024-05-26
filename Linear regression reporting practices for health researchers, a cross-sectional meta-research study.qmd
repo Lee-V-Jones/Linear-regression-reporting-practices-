@@ -1,0 +1,890 @@
+---
+title: "Linear regression reporting practices for health researchers, a cross-sectional meta-research study"
+format:
+  plos-pdf:
+    template-partials:
+      - before-bib.tex
+    number-sections: false
+    keep_tex: TRUE
+author:
+  - name: Lee Jones
+    affiliations:
+      - ref: aff1
+      - ref: aff2
+      - ref: aff3
+    corresponding: true
+    email: lee.jones@qut.edu.au
+  - name: Adrian Barnett
+    affiliations:
+      - ref: aff2
+  - name: Dimitrios Vagenas
+    affiliations:
+       - ref: aff1
+affiliations:
+  - id: aff1
+    name:  Research Methods Group, Faculty of Health, School of Public Health and Social Work, Queensland University of Technology
+    city: Kelvin Grove
+    state: Queensland
+    country: Australia
+  - id: aff2
+    name: AusHSI, Centre for Healthcare Transformation, Faculty of Health, School of Public Health and Social Work, Queensland University of Technology
+    city: Kelvin Grove
+    state: Queensland
+    country: Australia
+  - id: aff3
+    name: Statistics Unit, QIMR Berghofer Medical Research Institute
+    city:  Herston
+    state: Queensland
+    country: Australia
+  
+abstract: |
+ \textbf{Background} \newline
+  Decisions about health care, such as the effectiveness of new treatments for disease, are regularly made based on evidence from published work. However, poor reporting of statistical methods and results is endemic across health research and risks ineffective or harmful treatments being used in clinical practice.  Statistical modelling choices often greatly influence the results. Authors do not always provide enough information to evaluate and repeat their methods, making interpreting results difficult. Our research is designed to understand current reporting practices and inform efforts to educate researchers.        
+  
+  \noindent \textbf{Methods} \newline
+   Reporting practices for linear regression were assessed in 95 randomly sampled published papers in the health field from PLOS ONE in 2019, which were randomly allocated to statisticians for post-publication review. The prevalence of reporting practices is described using frequencies, percentages, and Wilson 95% confidence intervals.            
+   
+  \noindent \textbf{Results} \newline
+  While 92% of authors reported p-values and 81% reported regression coefficients, only 58% of papers reported a measure of uncertainty, such as confidence intervals or standard errors. Sixty-nine percent of authors did not discuss the scientific importance of estimates, and only 23% directly interpreted the size of coefficients.
+   
+   \noindent  \textbf{Conclusion} \newline
+ Our results indicate that statistical methods and results were often poorly reported without sufficient detail to reproduce them. To improve statistical quality and direct health funding to effective treatments, we recommend that statisticians be involved in the research cycle, from study design to post-peer review.   The research environment is an ecosystem, and future interventions addressing poor statistical quality should consider the interactions between the individuals, organisations and policy environments. Practical recommendations include journals producing templates with standardised reporting and using interactive checklists to improve reporting practices.  Investments in research maintenance and quality control are required to assess and implement these recommendations to improve the quality of health research. 
+  
+bibliography: bibliography.bib
+header-includes:
+ - \usepackage{longtable,booktabs}
+ - \usepackage[T1]{fontenc}
+ - \usepackage{changepage}
+ - \usepackage{float}
+ - \makeatletter\renewcommand*{\fps@figure}{H}\makeatother
+ - \raggedbottom
+ - \usepackage{makecell}
+ - \usepackage{pbox}
+ - \usepackage{colortbl}
+ - \newenvironment{widestuff}{\begin{adjustwidth}{-2.25in}{0in}\centering}{\end{adjustwidth}}
+ - \usepackage{array}
+ - \usepackage{tabularx}
+ - \usepackage{caption}% fix vertical spacing of table captions
+ - \usepackage{multirow} 
+ - \usepackage{varwidth}
+ - \newcolumntype{M}{>{\begin{varwidth}{4cm}}l<{\end{varwidth}}} %M is for Maximal column
+ - \usepackage{lmodern}
+ - \newcommand{\beginsupplement}{\setcounter{table}{0}  \renewcommand{\thetable}{S\arabic{table}} \setcounter{figure}{0} \renewcommand{\thefigure}{S\arabic{figure}}}
+ - \usepackage[table]{xcolor}
+ - \definecolor{lightgray}{gray}{0.94}
+ - \let\oldtabular\tabular
+ - \let\endoldtabular\endtabular
+ - \renewenvironment{tabular}{\rowcolors{2}{lightgray}{white}\oldtabular}{\endoldtabular}
+ - \usepackage{lineno}
+ -  \linenumbers
+ -  \renewcommand\makeLineNumber{}
+ -  \usepackage{amsmath,amssymb}
+ - \setlength{\parindent}{0.5cm} 
+ - \setlength{\parskip}{0pt} 
+ - \usepackage{hyperref} % Place this in your LaTeX document preamble    
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning=FALSE, message = FALSE)
+
+```
+
+```{r data}
+library(knitr)
+library(tidyverse)
+library(summarytools)
+library(flextable)
+library(officer)
+library(irrCAC)
+library(xtable)
+library(bookdown)
+library(formatR)
+library(PropCIs)
+library(DescTools)
+library(rlist)
+library (gtsummary)
+library(car)
+library(conflicted)
+conflict_prefer_all("dplyr", c("sjlabelled", "psychTools", "stats" ))
+
+
+wide<-read_csv (file= "data/wide.csv")
+
+# function to round and give exact number of decimal places
+Sround <-
+  function(x, k)
+    trimws(format(round(x, k), nsmall = k))
+
+# function so that numbers can be printed as words
+int_to_words <- function(x) {
+    if (x < 0 || x > 100) {
+        stop("Number out of range. Please provide a number between 0 and 100.")
+    }
+    
+    words_1_to_19 <- c('one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 
+                       'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 
+                       'eighteen', 'nineteen')
+    tens_words <- c('twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety')
+    
+    if (x == 0) {
+        return("zero")
+    } else if (x <= 19) {
+        return(words_1_to_19[x])
+    } else if (x == 100) {
+        return("one hundred")
+    } else {
+        tens <- floor(x / 10)
+        units <- x %% 10
+        
+        if (units == 0) {
+            return(tens_words[tens - 2])
+        } else {
+            return(paste(tens_words[tens - 1], words_1_to_19[units] , sep = "-"))
+        }
+    }
+}
+
+
+
+
+#GT summary theme
+my_theme <-
+  list(
+    # round large p-values to two places
+    "pkgwide-fn:pvalue_fun" = function(x) style_pvalue(x, digits = 3),
+    "pkgwide-fn:prependpvalue_fun" = function(x) style_pvalue(x, digits = 3, prepend_p = TRUE),
+    # report median (IQR) and n (percent) as default stats in `tbl_summary()`
+    #"tbl_summary-str:continuous_stat" = "{mean} ({SD})",
+    "tbl_summary-str:categorical_stat" = "{n} ({p}%)"
+  )
+set_gtsummary_theme(my_theme)
+
+
+capitalize_first_letter <- function(string) {
+    paste(toupper(substring(string, 1, 1)), tolower(substring(string, 2)), sep = "")
+}
+
+
+
+# capture session information in a text file
+#sessionInfo() %>% capture.output(file="session_info.txt")
+
+```
+
+
+```{r, results='hide'}
+
+
+# Variables needed to create prevalence tables # prevalence using three raters
+wide1<-wide %>% select(paper_ID ,  coefficient_4, ci_4, se_4, rsq_4, stat_4, df_4, nobs_4, direction_4, size_4, pvalues_4,  
+                   importance_4, collinearity_4, transform_4, scaled_4, 
+model_4, modelstrat_4, modelsig_4)
+wide1<-wide1[ c(2:18)] 
+
+
+ft1 <-
+ wide1 %>%  tbl_summary( missing = "no" ,
+    digits = list(all_categorical() ~ 0))  %>%   add_n () %>% as_tibble()
+names(ft1)<-c("Variables", "N", "Prevalence")
+
+# include the categories not represented in data
+ft1<- ft1 %>% add_row(.after = 42) %>% add_row(.after = 42) %>% add_row(.after = 42)
+ft1$Prevalence[43] <- "0 (0%)"
+ft1$Prevalence[44] <- "0 (0%)"
+ft1$Prevalence[45] <- "0 (0%)"
+
+ft1$Variables<-c('Coefficients',
+                   'Confidence intervals',
+                   'Standard error', 
+                   'R-Squared', 
+                   'F/t statistics',
+                   'Degrees of freedom',
+                   'Number of observations in models',
+                   'Has the direction of the parameter estimates been interpreted?',
+                   'Has the size of the parameter estimates been interpreted?',
+                  'Have p-values been reported?',
+                  'No',
+                   'Mostly reported categorically',
+                  'Mostly reported continuously',
+                  'Have authors discussed the scientific importance of parameter estimates?',
+                   'No',
+                  'Yes, but only in a generic way',
+                  'Yes, linked size of effect back to outcome variable',
+                  'Was collinearity of X variables in models evaluated?',
+                'Not required',
+                'No',
+                'Yes',
+                'Were any continuous variables transformed not including categorisation?',
+                'No',
+                'Yes, but did not describe reasoning for transformation',
+                'Yes, described reasoning for transformation',
+                'Were continuous variables on a very large or small scales in the model scaled appropriately?',
+                'Not required',
+                'Unclear',
+                'No',
+                'Yes',
+                'Is there any process for selecting the variables included in the final model?',
+                'Unclear',
+                'Univariate modeling only (one X variable)',
+                'Model based on reference literature or author knowledge',
+                'Significant variables from univariate analysis were included in a multivariable model',
+                'Used recognised statistical modeling strategy',
+                'Other',
+                'Which variable selection strategy was used?',
+                'No recognised modeling strategy',
+                'Forwards',
+                'Backwards',
+                'Stepwise',
+                'Information criterion',
+                'Regularisation methods',
+                'Other',
+                'Does the paper mention any statistical significance criteria for including variables?',
+                'No recognised modeling strategy',
+                'No',
+                'Yes')
+
+#getting CI for prevalence 
+my_list2 <- list( wide1$coefficient_4, wide1$ci_4, wide1$se_4, wide1$rsq_4, wide1$stat_4, wide1$df_4, wide1$nobs_4, wide1$direction_4, wide1$size_4)
+
+observed <- sapply(my_list2, function(i) base::sum(i, na.rm = TRUE))
+valid_counts <- sapply(my_list2, function(i) base::sum(!is.na(i)))
+M<-BinomCI(observed, valid_counts,
+        conf.level = 0.95,
+        method = "wilson")
+
+
+
+
+observed1<-freq(wide1$pvalues_4)
+observed2<-freq(wide1$importance_4)
+observed3<-freq(wide1$collinearity_4)
+observed4<-freq(wide1$transform_4)
+observed5<-freq(wide1$scaled_4)
+observed6<-freq(wide1$model_4)
+observed7<-freq(wide1$modelstrat_4)
+observed8<-freq(wide1$modelsig_4)
+
+observed1<-observed1[c(1:3),1]
+observed2<-observed2[c(1:3),1]
+observed3<-observed3[c(1:3),1]
+observed4<-observed4[c(1:3),1]
+observed5<-observed5[c(1:4),1]
+observed6<-observed6[c(1:6),1]
+observed7<-observed7[c(1:5,5,5),1] # missing last three categories but still want to show so including NA which as freq of zero
+observed8<-observed8[c(1:3),1]
+
+M1<-MultinomCI(observed1,conf.level=0.95,method="wilson") 
+M2<-MultinomCI(observed2,conf.level=0.95,method="wilson") 
+M3<-MultinomCI(observed3,conf.level=0.95,method="wilson") 
+M4<-MultinomCI(observed4,conf.level=0.95,method="wilson") 
+M5<-MultinomCI(observed5,conf.level=0.95,method="wilson") 
+M6<-MultinomCI(observed6,conf.level=0.95,method="wilson") 
+M7<-MultinomCI(observed7,conf.level=0.95,method="wilson") 
+M8<-MultinomCI(observed8,conf.level=0.95,method="wilson") 
+M<-as.data.frame(rbind(M,M1,M2,M3,M4,M5,M6,M7, M8))
+M$wci<-paste0 (format(round(M$lwr.ci*100,0),nsmall=0),"%" ,", " ,format(round(M$upr.ci*100,0),nsmall=0),"%")
+rownames(M)<-NULL
+
+M<- M %>% add_row(.after = 9) %>% add_row(.after = 13) %>% add_row(.after = 17) %>% add_row(.after = 21) %>% add_row(.after = 25) %>% add_row(.after = 30) %>% add_row(.after = 37) %>% add_row(.after = 45) # add in extra space for variable names
+#bind for table
+ft1<-as.data.frame(cbind(ft1, M)) %>% dplyr::select(Variables, N, Prevalence, wci)
+names(ft1)<-c( "Variables",  "N" ,  "ReplaceN", "95 CI") 
+
+df1<-ft1[c(1:30),c(1:4)]
+df2<-ft1[c(31:49),c(1:4)]
+
+
+# creating the latex syntax
+sbold <- function(x){paste0('{\\bf ', x, '}')}
+df1b<-print(xtable(df1, caption="Observed prevalence and 95 confidence interval for reported statistical behaviours.", align = c("l", "p{9cm}",  "l", "l", "l")),  booktabs = getOption("xtable.booktabs", TRUE), caption.placement="top", include.rownames=FALSE, type="latex", latex.environments = "widestuff", sanitize.colnames.function=sbold, floating=T)
+
+# post table editing      
+df1b<-sub('ht', "H", df1b)
+df1b<-sub('ReplaceN',  "n (\\\\%) ", df1b) 
+df1b<-sub('95 CI', "95\\\\% CI", df1b)
+df1b<-sub('95  CI', "95\\\\% CI", df1b)
+df1b<-sub('95 confidence interval', "95\\\\% confidence interval", df1b)
+df1b<-sub('R-Squared', "\\\\ $R^2$", df1b)
+
+
+
+df1b <- sub("\\begin{tabular}{p{9cm}lll}", "\\begin{flushleft}  \\begin{tabular}{p{9cm}lll} " , df1b, fixed = TRUE)
+df1b <- sub("\\end{tabular}", "\\end{tabular} \\end{flushleft} \\begin{flushleft} N = Number of papers; n (\\%) = Prevalence;  95\\% CI  =	Wilson 95\\% confidence intervals. \\end{flushleft}", df1b, fixed = TRUE)
+
+
+
+#write to tables folder
+dir_name <- "tables"
+file_path1 <- file.path(dir_name, "Table1.tex")
+write(df1b, file = file_path1, sep = "\t")
+
+```
+
+```{r, results='hide'}
+# creating the latex syntax
+sbold <- function(x){paste0('{\\bf ', x, '}')}
+df2b<-print(xtable(df2, caption="Observed prevalence and 95 confidence interval model selection and reporting.", align = c("l", "p{9cm}",  "l", "l", "l")),  booktabs = getOption("xtable.booktabs", TRUE), caption.placement="top", include.rownames=FALSE, type="latex", latex.environments = "widestuff", sanitize.colnames.function=sbold, floating=T)
+
+# post table editing      
+df2b<-sub('ht', "H", df2b)
+df2b<-sub('ReplaceN',  "n (\\\\%) ", df2b) 
+df2b<-sub('95 CI', "95\\\\% CI", df2b)
+df2b<-sub('95  CI', "95\\\\% CI", df2b)
+df2b<-sub('95 confidence interval', "95\\\\% confidence interval", df2b)
+
+
+df2b <- sub("\\begin{tabular}{p{9cm}lll}", "\\begin{flushleft}  \\begin{tabular}{p{9cm}lll} " , df2b, fixed = TRUE)
+df2b <- sub("\\end{tabular}", "\\end{tabular} \\end{flushleft} \\begin{flushleft} N = Number of papers; n (\\%) = Prevalence;  95\\% CI  =	Wilson 95\\% confidence intervals. \\end{flushleft}", df2b, fixed = TRUE)
+
+
+
+# write to tables foldder
+file_path2 <- file.path(dir_name, "Table2.tex")
+write(df2b, file = file_path2, sep = "\t")
+
+```
+
+
+
+
+```{r, results='hide'}
+
+  # creating datasets for the gwets Kappa
+coefficient<-wide %>% select(coefficient_1s, coefficient_2s) %>% na.omit
+coefficient_1<-wide %>% select(coefficient_1s, coefficient_4) %>% na.omit  
+coefficient_2<-wide %>% select(coefficient_2s, coefficient_4) %>% na.omit  
+ci<-wide %>% select(ci_1s, ci_2s) %>% na.omit  
+ci_1<-wide %>% select(ci_1s, ci_4) %>% na.omit 
+ci_2<-wide %>% select(ci_2s, ci_4) %>% na.omit 
+se<- wide %>% select(se_1s, se_2s) %>% na.omit
+se_1<- wide %>% select(se_1s, se_4) %>% na.omit
+se_2<- wide %>% select(se_2s, se_4) %>% na.omit
+rsq<-wide %>% select(rsq_1s, rsq_2s) %>% na.omit
+rsq_1<-wide %>% select(rsq_1s, rsq_4) %>% na.omit
+rsq_2<-wide %>% select(rsq_2s, rsq_4) %>% na.omit
+stat<-wide %>% select(stat_1s, stat_2s) %>% na.omit
+stat_1<-wide %>% select(stat_1s, stat_4) %>% na.omit
+stat_2<-wide %>% select(stat_2s, stat_4) %>% na.omit
+df<-wide %>% select(df_1s, df_2s) %>% na.omit
+df_1 <-wide%>% select(df_1s, df_4) %>% na.omit
+df_2<-wide %>% select(df_2s, df_4) %>% na.omit
+nobs<-wide %>% select(nobs_1s, nobs_2s) %>% na.omit
+nobs_1<-wide %>% select(nobs_1s, nobs_4) %>% na.omit
+nobs_2<-wide %>% select(nobs_2s, nobs_4) %>% na.omit
+direction<-wide %>% select(direction_1s, direction_2s) %>% na.omit
+direction_1<-wide %>% select(direction_1s, direction_4) %>% na.omit
+direction_2<-wide %>% select(direction_2s, direction_4) %>% na.omit
+size<-wide %>% select(size_1s, size_2s) %>% na.omit
+size_1<-wide %>% select(size_1s, size_4) %>% na.omit
+size_2<-wide %>% select(size_2s, size_4) %>% na.omit
+pvalues<-wide %>% select(pvalues_1s, pvalues_2s) %>% na.omit
+pvalues_1<-wide %>% select(pvalues_1s, pvalues_4) %>% na.omit
+pvalues_2<-wide %>% select(pvalues_2s, pvalues_4) %>% na.omit
+importance<-wide %>% select(importance_1s, importance_2s) %>% na.omit
+importance_1<-wide %>% select(importance_1s, importance_4) %>% na.omit
+importance_2<-wide %>% select(importance_2s, importance_4) %>% na.omit
+collinearity<-wide %>% select(collinearity_1s,collinearity_2s) %>% na.omit
+collinearity_1<-wide %>% select(collinearity_1s,collinearity_4) %>% na.omit
+collinearity_2<-wide %>% select(collinearity_2s,collinearity_4) %>% na.omit
+transform<-wide %>% select(transform_1s, transform_2s) %>% na.omit
+transform_1<-wide %>% select(transform_1s, transform_4) %>% na.omit
+transform_2<-wide %>% select(transform_2s, transform_4) %>% na.omit
+scaled<-wide %>% select(scaled_1s, scaled_2s) %>% na.omit
+scaled_1<-wide %>% select(scaled_1s, scaled_4) %>% na.omit
+scaled_2<-wide %>% select(scaled_2s, scaled_4) %>% na.omit
+model<-wide %>% select(model_1s, model_2s) %>% na.omit
+model_1<-wide %>% select(model_1s, model_4) %>% na.omit
+model_2<-wide %>% select(model_2s, model_4) %>% na.omit
+modelstrat<-wide %>% select(modelstrat_1s, modelstrat_2s) %>% na.omit
+modelstrat_1<-wide %>% select(modelstrat_1s, modelstrat_4) %>% na.omit
+modelstrat_2<-wide %>% select(modelstrat_2s, modelstrat_4) %>% na.omit
+modelsig<-wide %>% select(modelsig_1s, modelsig_2s) %>% na.omit
+modelsig_1<-wide %>% select(modelsig_1s, modelsig_4) %>% na.omit
+modelsig_2<-wide %>% select(modelsig_2s, modelsig_4) %>% na.omit
+
+
+
+
+
+
+my_list1 <- list(coefficient, ci, se, rsq, stat, df, nobs, direction, size, pvalues,  importance, collinearity, transform, scaled, 
+model, modelstrat, modelsig)
+my_list_1 <- list(coefficient_1, ci_1, se_1, rsq_1, stat_1, df_1, nobs_1, direction_1, size_1, pvalues_1,  importance_1, collinearity_1, transform_1, scaled_1, 
+model_1, modelstrat_1, modelsig_1)
+my_list_2 <- list(coefficient_2, ci_2, se_2, rsq_2, stat_2, df_2, nobs_2, direction_2, size_2, pvalues_2,  importance_2, collinearity_2, transform_2, scaled_2, 
+model_2, modelstrat_2, modelsig_2)
+
+
+process_data <- function(data_list) {
+    # Apply gwet.ac1.raw to each data frame in the list
+    gwet <- lapply(data_list, function(df) gwet.ac1.raw(df)[1])
+    # Bind and stack the list of results
+    gwet <- list.rbind(gwet)
+    gwet <- list.stack(gwet)
+    
+    # Check if the expected columns exist and then format the data
+    gwet_formatted <- gwet %>%
+    dplyr::select(pa, pe, coeff.val, conf.int, coeff.se, p.value) %>%
+    dplyr::mutate(
+      p.value = if_else(p.value < 0.001, "<0.001", as.character(Sround(p.value, 3))),
+      coeff.val = Sround(coeff.val, 2),
+      coeff.se = Sround(coeff.se, 2),
+      pa = paste0(Sround(pa * 100, 0), "%"),
+       pe = paste0(Sround(pe * 100, 0), "%")
+    ) %>%
+    tidyr::separate(conf.int, c("l", "u"), ",", extra = "merge") %>%
+    dplyr::mutate(
+      l = stringr::str_replace(l, "[\\[\\(\\]]", ""),
+      u = stringr::str_replace(u, "[\\[\\)\\]]", ""),
+      l = Sround(as.numeric(l), 2),
+      u = Sround(as.numeric(u), 2),
+      conf.int = paste0(l, ", ", u)
+    ) %>%
+    dplyr::select(pa, pe, coeff.val, conf.int, coeff.se, p.value) %>%
+    rename(
+      "Agreement" = "pa",
+      "Pe" = "pe",
+      "Gwet" = "coeff.val",
+      "95% CI" = "conf.int",
+      "SE" = "coeff.se"
+    )
+  
+  return(gwet_formatted)
+}
+
+
+# Apply the function to each list
+results1 <- process_data(my_list1) 
+ results_1 <- process_data(my_list_1)
+results_2 <- process_data(my_list_2)
+
+
+Variable<-c("Coefficient", "Confidence intervals", "Standard error", "R-Squared", "F/t statistics", "Degrees of freedom", "N in models", "Direction interpreted", "Size interpreted", "p-values",  "Importance of parameters", "Collinearity evaluated", "variables transformed",  "Scaled appropriately", "Process variable selection", "Variable selection strategy", "Model significance criteria")
+
+S1 <- rbind(results1, results_1, results_2) %>%
+  mutate(Variable = rep(Variable, times = 3)) %>%
+  add_row(.before = 1) %>%
+  add_row(.after = 18) %>%
+  add_row(.after = 36) %>%
+  mutate(Variable = replace(
+    Variable,
+    c(1, 19, 37),
+    c(
+      "Rating 1 vs Rating 2",
+      "Rating 1 vs Prevalence",
+      "Rating 2 vs Prevalence"
+    ))) %>%
+  select(Variable, everything()) 
+
+
+# Create a new Word document for suplementary
+doc <- read_docx()
+
+doc <-
+  body_add_par(doc,
+               "S1 Table: Full reporting of agreement and reliability for statistical raters for 95 papers.",
+               style = "Normal")
+doc <-
+  body_add_par(doc, " ", style = "Normal")  # Adding an empty line for spacing
+
+doc <- body_add_flextable(
+  doc,
+  value = S1 %>%
+    flextable() %>%
+    set_table_properties(layout = "autofit") %>%
+    set_header_labels(p.value = "p-value") %>% 
+    fontsize(size = 9, part = "all") %>%
+    bold(
+      i = c(1, 19, 37),
+      j = 1,
+      bold = TRUE
+    ) # Add this line
+)
+
+# Add footnote
+doc <-
+  body_add_par(
+    doc,
+    "Agreement = Observed agreement, Pe = The expected agreement by chance, Gwet = Gwet agreement coefficient, 95% CI = Gwet 95% confidence intervals, SE = Standard Error. Variables were either binary or nominal and did not require weighting.",
+    style = "Normal"
+  )
+# Define the path for the subfolder and file
+subfolder_path <- "tables/"
+file_name <-
+  "S1 Table_Full reporting of agreement and reliability for statistical raters.docx"
+full_path <- paste0(subfolder_path, file_name)
+print(doc, target = full_path)
+
+
+ results1<- results1 %>% select(-p.value,-SE, -Pe)
+results_1<- results_1 %>% select(-p.value,-SE, -Pe)
+results_2<- results_2 %>% select(-p.value,-SE, -Pe)
+ 
+
+
+df3<-cbind(Variable,results1, results_1, results_2)
+names(df3)<- c("Variable",  "Agree", "Gwet", "95 CI" ,  "Agree", "Gwet", "95 CI",  "Agree", "Gwet", "95 CI") 
+df3 <- df3[order(df3$Agree, decreasing = TRUE), ]
+
+# creating the latex syntax
+sbold <- function(x){paste0('{\\bf ', x, '}')}
+df3a<-print(xtable(df3, caption=" Agreement and reliability of statistical raters for 95 papers.", align = c("l", "l",  "l", "l", "l", "l", "l",  "l", "l", "l", "l")),  booktabs = getOption("xtable.booktabs", TRUE), caption.placement="top", include.rownames=FALSE, type="latex", latex.environments = "widestuff", sanitize.colnames.function=sbold, floating=T)
+  
+# post table editing    
+df3a<-sub('ht', "H", df3a)
+df3a<-sub('95 CI', "95\\\\% CI", df3a)
+df3a<-sub('95 CI', "95\\\\% CI", df3a)
+df3a<-sub('95 CI', "95\\\\% CI", df3a)
+
+df3a <- sub("\\begin{tabular}{llllllllll}", "\\begin{flushleft}  \\begin{tabular}{llllllllll}" , df3a, fixed = TRUE)
+df3a <- sub("\\end{tabular}", "\\end{tabular} \\end{flushleft} \\begin{flushleft}  Agree = Observed agreement, Gwet = Gwet agreement coefficient; 95\\% CI = Gwet 95\\% confidence intervals. \\end{flushleft}", df3a, fixed = TRUE)
+
+df3a <- sub("\\\\toprule", "\\\\toprule & \\\\multicolumn{3}{l}{\\\\textbf{Rating 1 vs Rating 2}} & \\\\multicolumn{3}{l}{\\\\textbf{Rating 1 vs Prevalence}} & \\\\multicolumn{3}{l}{\\\\textbf{Rating 2 vs Prevalence}} \\\\\\\\
+\\\\cline{2-10}", df3a)
+
+
+# write to tables folder
+file_path3 <- file.path(dir_name, "Table3.tex")
+write(df3a, file = file_path3, sep = "\t")
+
+
+
+```
+
+
+
+
+```{r SEMtab, results='hide'}
+# creation of  table
+df4 = data.frame(matrix(vector(), 5, 2, dimnames=list(c(), c("Level", "Description"))),
+                stringsAsFactors=F)
+
+df4$Level[1]<-'Individual'
+df4$Description[1]<-'- Individual characteristics that influence behaviour change, including knowledge, statistical literacy, beliefs, attitudes, and personal traits such as gender, years of experience and job security.'
+df4$Level[2]<-'Interpersonal'
+df4$Description[2]<-'- Formal and informal social networks and support systems that can influence individual behaviours to promote interpersonal growth that encourages good statistical practice including peers and co-workers, and mentors.'
+df4$Level[3]<-'Community'
+df4$Description[3]<-'- Formal or informal social norms can limit or encourage good statistical and research behaviours among individuals, groups, or organisations. \n'
+df4$Level[4]<-'Organisational'
+df4$Description[4]<-'- Organisations rules and regulations for operations, for example, ethics committees in hospitals or universities.\n 
+	- Access to research infrastructure, including statistical resources such as statistical programs and educational resources. \n
+	- Access to qualified statisticians. \n
+	- Sustainable research metrics with quality valued over quantity. \n
+ -	Organisational oversite of research misconduct.'
+df4$Level[5]<-'Policy Environment'
+df4$Description[5]<-'- Local, state, national and global policies regarding the allocation of resources for meta-research to tackle systematic issues. \n
+ - Regulatory bodies, state, national and international integrity commissions, for the oversite of research misconduct.'
+
+
+
+df4a<-print(xtable(df4, caption="Social Ecological Model a system-wide approach to reform statistical practices adapted from Bronfenbrenner [66]", 
+              align = c("l", "p{5cm}", "p{13cm}")), booktabs = getOption("xtable.booktabs", TRUE), caption.placement="top", include.rownames=FALSE, type="latex", latex.environments = "widestuff",  sanitize.colnames.function=sbold, floating=T)
+
+
+# write to tables folder
+file_path4 <- file.path(dir_name, "Table4.tex")
+write(df4a, file = file_path4, sep = "\t")
+```
+
+
+Introduction
+============
+
+Health systems are generally complex and often comprise a network of interrelated variables. Statistical methods can help untangle and understand these relationships, allowing the quantification and estimation of the effects of diseases and treatments. When researchers analyse their data, they face many decisions, including which variables to explore, what statistical test to perform, and whether data should be excluded or transformed [@gelman2013garden]. It has been increasingly recognised that the transparency of the decisions made through this process plays an essential role in interpreting results [@thiese2015misuse].
+
+Evidence suggests that poor statistical quality amongst researchers is endemic, with an estimated 85% of medical research avoidably wasted through poor study design, analysis, reporting quality and the low frequency of publication of non significant results [@chalmers2009avoidable].   This shocking figure can be attributed to several sources, including 50% of health research not being published [@chalmers2014increase]; when reported, studies are often poorly designed, inappropriately analysed, and selectively reported, with benefits often exaggerated [@ioannidis2014increasing]. While there is a discussion of these issues, such as the publish or perish culture within universities [@kun2018publish] and questionable research practices [@artino2019ethical], it is widely acknowledged that lack of statistical training contributes to all aspects of poor reporting [@altman2002poor].     
+
+ At the centre of the research waste problem is the quality of statistical reporting and the rising importance of p-values.  The widespread misuse and misunderstanding of p-values have been reported for decades [@greenland2016statistical; @wasserstein2016asa], with many researchers mindlessly applying significance rules without understanding the size or importance of the studied effect [@ziliak2008cult]. King et al. [@king2019using] suggest that problems with the selection and interpretation of statistical methods are driven by researchers’ reliance on statistical rules of thumb and justification of traditional methods that are popular in the field, even if they are inappropriate.  Stark and Saltelli [@stark2018cargo] suggest many researchers are guilty of "cargo cult" thinking and go through the process of fitting models, calculating p-values and invoking statistical terms with little understanding of the methods involved.
+ 
+ Reporting guidelines have been created to help address poor reporting and increase transparency and reproducibility in health research. While many research guidelines exist, very few provide detailed advice on reporting and interpreting data analysis [@hutton2017reporting]. Examples of statistical guidelines for authors include the Statistical Analyses and Methods in the Published Literature (SAMPL) [@lang2013basic], Strengthening Analytical Thinking for Observational Studies (STRATOS) [@sauerbrei2014strengthening]  and Transparent reporting of a multivariable prediction model for individual prognosis or diagnosis (TRIPOD) [@collins2024tripod].  The SAMPL was created by Lang et al. [@lang2013basic] and includes reporting guidelines for common statistical methods, including linear regression. Many authors have recommended the SAMPL guidelines [@hutton2017reporting; @thiese2015misuse], but only a small number of studies actually cite SAMPL for either individual use [@worm2018factors; @wu2014reporting]  or for reporting of quality in reviews  [@leucuta2015statisticala; @wayant2017hematology], suggesting they are not widely used, highlighting the need to promote statistical guidelines to increase awareness and use among health professionals [@khan2017guidelines].
+ 
+
+There have been robust conversations within the statistical community on how to improve the quality of statistical reporting, much of which focuses on p-values and their interpretation with calls to either remove p-values entirely and focus on confidence and prediction intervals or use alternative methods such as likelihood ratios or Bayes Factors [@wasserstein2016asa]. While there are many commentaries on improving statistical quality, only a few studies directly assess authors' current practice and statistical understanding [@altman1998statistical].  This study aims to understand better where statistical reporting can be improved and inform efforts to educate researchers. We selected regression analyses because it is a widely used method that can provide valuable insights when correctly applied. In a related paper, we examined common misconceptions in the assumptions of linear regression [@jones2024common]. Building on the previous paper, this research highlights the most common issues health researchers face when interpreting regression analyses and makes recommendations for improving practice.
+
+
+Materials and Methods
+=====================
+
+This cross-sectional study was designed to understand the prevalence of statistical reporting behaviours for authors using linear regression, including understanding modelling choices and how often statistics were reported, such as coefficients, confidence intervals, and p-values.
+
+## Research question
+
+-	How do authors using linear regression report their model and results?
+
+
+## Sample size
+The primary aim of this study was not hypothesis testing but to gain a descriptive understanding of current statistical reporting practices in published manuscripts with a focus on regression assumptions.  The study was powered with a 5% margin of error to detect a sample proportion of 0.05 (5%) using a two-sided 95% confidence interval, calculated using exact Clopper--Pearson confidence intervals, using PASS [@pass2013]. This sample size was also deemed adequate to understand the prevalence of general statistical reporting behaviours. We estimated 40 statisticians were required to rate the 100 papers, with each paper reviewed twice (40 statisticians × 5 papers = 200 reviews), and five papers per reviewer were thought to be reasonable from our experience and initial feedback.
+
+
+##  Study ethics,  statistician recruitment, and consent
+
+This study was granted Negligible-Low Risk Ethics from the Queensland University of Technology (QUT) Human Research Ethics Committee with approval number 2000000458. Statisticians were recruited through professional societies in Australia and internationally, such as the Statistical Society of Australia, universities, and other relevant organisations using targeted emails, LinkedIn, and Twitter. The inclusion criterion was previous or current employment as a statistician, data analyst, or data scientist. Study information, including the study protocol, participant information sheet, and the study questions, were available on GitHub and emailed to participants  [@lee_jones_2024_10620146], who were also sent online links to the five *PLOS ONE* papers to be reviewed. Informed written consent was obtained from the statistician by filling out and returning the consent form, which asked if participants would like to be acknowledged in the paper. Study recruitment started in September 2020 and finished in June 2021, with the last participant completed their reviews in September 2021. On average, the median time to completion was four weeks; statisticians were recruited until all 200 reviews were complete. In total, 46 statisticians were recruited, of which five withdrew due to changed circumstances, and one participant had difficulty completing the online form and was replaced.
+
+
+## Randomisation
+
+One hundred research papers (excluding editorials and other non-research papers) were randomly selected from *PLOS ONE* in 2019. Papers were selected if they had "health" anywhere in the subject area and used the term 'linear regression' in the materials and methods section by using the  "searchplos" function within the "rplos" package in R [@Chamberlain2014rplos]. Papers that met the inclusion criteria were randomly ordered, and the first eligible 100 were selected. To capture the broader use of regression from the population of health researchers, we chose to focus on standard linear regression; papers were excluded if the regression included cluster or random effects or used alternative methods such as Bayesian, non-parametric, or where the linear regressions were not part of the paper’s primary analyses, e.g., related to pre-processing such as calibrating a reference sample.
+
+
+## Calculating the prevalence of statistical reporting behaviours
+Two volunteer statisticians rated each paper, and the primary author, LJ, also independently provided a third statistical rating. The study was initially designed for the prevalence to be calculated using the two ratings with the primary author adjudicating differences; however, due to the length and complexity of papers, it was decided by the authorship team to use all three ratings to improve the accuracy of results. The reliability of ratings from the two independent statisticians was calculated. Then, each set was compared to the final prevalence to assess the impact of the change to the protocol. Disagreements between the three ratings were documented by reading and commenting on the PDF of papers and recording each disagreement. Finally, the results were also cross-checked for consistency; for example, if a paper was identified as having only univariate models (i.e. single explanatory variable), it did not require checks for collinearity. The paper was then checked, and prevalence was updated accordingly.
+
+
+## Data analysis 
+The purpose of this study is a descriptive analysis of statistical reporting behaviours, which were described using frequencies, percentages and 95% Wilson confidence intervals to account for percentages close to zero. The reliability of statistical ratings was described using observed agreement and analysed with Gwet’s statistics [@gwet2008computing]. The assumptions in Gwet's analysis do not require testing but instead, relate to the interpretation and generalisability of results. In this case, papers were randomly sampled and randomly allocated to statisticians; no weighting was applied as variables were either binary or nominal. The STROBE guideline for reporting cross-sectional studies was used [@von2007strengthening]. R version 4.3.2 [@Rteam] was used for all statistical analyses.   
+
+
+##  Linear Regression
+
+This section provides some technical background on linear regression, a method widely used in research, for readers who may be unfamiliar with it. It also provides context on what researchers need to report when applying this method in their studies. 
+
+Simple linear regression is a statistical method that can be used to understand the relationship between two continuous variables, for example, age and blood pressure. A linear relationship is assumed between the dependent (often notated Y) and model parameters associated with the explanatory variable. The explanatory variables are usually denoted by the X variable, as shown in (Fig 1) and described by (Equation 1). This can be readily expanded to “multiple” regression, which allows for multiple independent variables (k explanatory variables and as many parameters) in the model (Equation 2). This enables us to estimate these model parameters for one variable while taking into account the effect that other explanatory variables can have on this relationship. It  also allows the exploration of more complex relationships, such as interactions between explanatory variables. Linear regression can also be used to model categorical X variables. In fact, t-tests, ANOVA and linear regression are special cases of the General Linear Model (GLM), where X variables can be either continuous or categorical.
+
+
+
+
+
+\begin{equation}
+ \label{eq:reg}
+\hat{Y}_i = \hat{\beta}_0 + \hat{\beta}_1 X_i + \hat{\epsilon}_i, \quad i = 1, \ldots, N
+\end{equation}
+
+
+
+\begin{equation}
+ \label{eq:reg1}
+\hat{Y}_i = \hat{\beta}_0 + \hat{\beta}_1 X_{1i} + \hat{\beta}_2 X_{2i} + \ldots + \hat{\beta}_k X_{ki} + \hat{\epsilon}_i, \quad i = 1, \ldots, N
+\end{equation}
+
+
+
+Equation (1) gives the mathematical form of linear regression. The index “i” is for each observation in the data, of which there are N in total. $\hat{\beta}_1$  is the slope; in our example, it represents the average change in blood pressure with a one-unit change in age. The term  $\hat{\beta}_0$ is the Y-intercept, which in our example is the blood pressure value when age equals zero. Finally, $\hat{\epsilon}_i$ is the "error" or "residual" term, which is the part of Yi that cannot be accounted for by the available information, i.e. by $\hat{\beta}_0 + \hat{\beta}_1 X_{1}$  for each observation.   
+
+
+```{r, results='hide'}
+
+# creating plots and putting into figures
+file_path1 <- "figures/Fig1.eps"
+# Start EPS device with specific dimensions
+postscript(
+  file_path1,
+  horizontal = FALSE,
+  onefile = FALSE,
+  paper = "special",
+  width = 7,
+  height = 6
+)
+
+
+# Set seed for reproducibility
+set.seed(12345)
+
+# Generate predictor variable (physical activity)
+age <- rnorm(200, mean = 55, sd = 10)
+
+# Generate error term
+error <- rnorm(200, mean = 0, sd = 10)
+
+# Generate outcome variable (blood pressure)
+blood_pressure <- 95 + 1 * age + error
+
+# Plot data
+plot(age, blood_pressure, xlab = "Age (years)", ylab = "Blood Pressure (mmHg)", col = "black", pch = 16)
+
+# Fit linear regression model
+model <- lm(blood_pressure ~ age)
+
+# Summarize model results
+#summary(model)
+abline(model, col = "red")
+
+text(x = 40, y = 190, labels = paste0("y = ", round(coefficients(model)[1], 2), " + ", round(coefficients(model)[2], 2), "x"), col = "blue")
+
+# Close the device
+dev.off()
+
+```
+
+```{r LR, fig.cap = "Example data on age and blood pressure and the line from a linear regression model.  \\label{figurelabel}", echo = FALSE, message=FALSE, out.width = "100%"}
+
+knitr::include_graphics('figures/Fig1.eps') 
+
+```
+
+
+
+### Regression coefficients and R^2^
+
+ In a simple linear regression model, the regression coefficient (b) represents the average change in the dependent variable (Y) for every unit increase in the explanatory variable [@montgomery2021introduction]. A common problem interpreting regression coefficients occurs when continuous variables are on a very large or small scale and it becomes difficult to interpret clinically meaningful change; an easy way to improve interpretation is to scale the variable appropriately. For example, weight in grams can be divided by 1000 and interpreted as the average change in Y with unit change in kilograms. Regression coefficients can also be “standardised” and used to compare variables measured on different scales, and coefficients can be interpreted in terms of standard deviations.  Suppose the explanatory variable is standardised to fit the standard normal distribution (i.e. X~N(0,1)) by subtracting the mean and dividing by the standard deviation.  In the univariate case (i.e. a single X), the covariance between standardised Y and standardised X equals the correlation coefficient of the two variables. The square of this correlation coefficient measures the proportion of variance in Y explained by X, given by the R-squared. In this univariate situation, R-squared is equivalent to squaring the correlation [@montgomery2021introduction].
+
+While these relationships between correlation and regression exist, researchers may not appreciate that they become complicated when there is more than one variable in the model and are calculated and interpreted differently. For example, the standardised regression coefficients in a multiple linear regression represent the unique contribution of each independent variable for the prediction of the dependent variable after accounting for the effects of all other variables in the model [@montgomery2021introduction]. R^2^, known as the coefficient of determination, in this case, represents the proportion of the variance in the dependent variable explained by all the explanatory variables. To account for variance explained by chance (i.e. spurious correlation) when multiple explanatory variables are in the model, an “adjusted” R^2^ is used. While R^2^ can be used as an effect size as, in general, a higher R^2^ value indicates a stronger relationship between the dependent and independent variables, it has limitations as it does not provide information on practical significance and considers all variables in the model, rather than specific variables of interest. Therefore, it is recommended that both regression coefficients and R^2^ are reported.
+
+
+### P-values, confidence intervals, and scientific importance
+
+P-values are the most frequently used measure of statistical evidence across all fields of science and research [@ioannidis2019have]. Despite the frequency of use, understanding p-values is elusive to most users, with widespread misuse being well-documented since the 1940s [@goodman2008dirty; @ioannidis2019have]. When conducting a hypothesis test, a test’s significance level (alpha) is chosen to determine the acceptable type I error (falsely rejecting the null hypothesis).  The p-value is the probability of obtaining a result at least as extreme as the observed result, assuming the null hypothesis is true.  P-values were introduced in the 1920s by Ronald Fisher and were not meant to be a conclusive test but, instead, a way of determining whether a result deserved further investigation [@nuzzo2014scientific]. Unfortunately, in practice, researchers often use this continuous measure as a threshold, creating a dichotomy of results declared either statistically significant (p < 0.05) or not [@gelman2017some], regardless of practical importance.   Despite much work in this area, errors in the logic of p-values remain prolific in the literature [@goodman1999toward; @best2016tea].  To avoid over-interpretation of p-values, it is recommended that the smallest clinical improvement considered consequential to the patient [@leopold2013editor] be identified before undertaking the study. In practice, this value may not be known for many exploratory studies, but such studies should still consider practical significance. 
+
+When translating research from the lab into clinical practice, researchers should be cautious about making important clinical changes based on the results of one study, as a sample-to-sample variation will likely change the estimated effect [@cumming2014new]. When other scientists replicate the research, the range of coefficients, confidence intervals, and p-values is gained. Usually, researchers don't have access to these replications and must make the best decisions based on the available information [@cumming2014new].   While the width of a confidence interval indicates how much these confidence intervals may bounce around when an experiment is replicated, the p-values fluctuate widely, and they are less useful in understanding whether results will be replicated in future experiments [@cumming2014new].  Therefore, it is recommended that confidence intervals are reported with p-values.
+
+
+
+
+### Data transformation
+
+Data transformation is used across the health area when data are skewed or do not fit a normal distribution, which is the distribution assumed for the residuals of linear regression.  Data transformation is one tool in the statistical toolbox, and while it is helpful in certain situations, it should be used cautiously. Logarithmic transformations have been used as a cure-all for assumption violations; for a detailed explanation of regression assumptions and outliers, see Jones et al. [@jones2024common]. When one or both variables have been log-transformed, the interpretation of regression coefficients changes from a unit change to a percent change. Means and 95% confidence intervals of groups can also be back transformed (geometric mean) [@bland1996statistics].  When the data fits the underlying transformed distribution, and the residuals of the linear model are normally distributed, the interpretation of results may be improved. However, when there is a lack of fit of the transformed variable, transformations can cause more problems than they fix, as they tend to reduce the variance [@changyong2014log]. Once transformed, interpretation becomes more complex and may distort relationships between variables, and researchers should consider using alternative statistical methods that are more appropriate for their data [@changyong2014log]; for example, a gamma distribution can be used for heavily skewed continuous data.
+
+
+### Modelling
+
+Broadly speaking, there are two approaches to model building: statistical and epidemiological. Statistical approaches include algorithmic methods such as stepwise modelling or regularisation methods that reduce the risk of overfitting [@heinze2018variable]. Epidemiological approaches include choosing the final model based on previous literature or known disease pathways, regardless of statistical significance. These approaches may result in different final models, p-values, and parameter estimates [@thiese2015misuse].
+
+The choice of model for data should be based on the study design and the research question. For example, in a Randomised Controlled Trial (RCT), where participants are successfully randomised into two groups, the only systematic difference between the groups is the study intervention. In practice, while RCTs can be analysed with a simple t-test, there are often adjustments for stratification and other pre-specified variables, all of which should be detailed in the study protocol. In comparison, observational studies are often complex and may have differing purposes depending on the research question. Relationships in observational studies are more difficult to directly measure due to confounding variables, which may distort relationships [@abramson2011research]. If not adequately accounted for, confounding variables may hide the true association between dependent and independent variables, leading to biased estimates and inflation of the variance [@howards2018overview], which will affect subsequent interpretation.
+
+Model selection methods use different approaches to identify the best subset of variables that predict the dependent variable [@zhang2016variable]. The most common statistical modelling approach is stepwise selection, which includes backward selection, forward selection, and a combination of both, known as stepwise selection [@montgomery2021introduction].  These approaches iteratively fit models by adding or removing variables based on predefined criteria [@zhang2016variable]. However, these methods have been criticised for producing overfitted models that describe the sample well but are less generalisable to the target population [@zhang2016variable]. Regularisation methods such as Lasso (Least Absolute Shrinkage and Selection Operator) and Ridge regression are another approach. These methods penalise the model based on complexity by introducing a parameter that allows variable coefficients with minor contributions to be shrunk towards zero [@hastie2015statistical]. These methods can deal with highly correlated independent variables, with Lasso allowing model selection by shrinking model parameters to absolute zero [@hastie2015statistical]. All modelling choices should match the study's objective and be pre-planned in a study protocol to allow transparency and avoid p-hacking [@simmons2011false; @sauerbrei2014strengthening].
+
+
+### Multicollinearity
+Regression models should be assessed for multicollinearity when multiple independent variables are included. Multicollinearity occurs when high correlations exist between two or more independent variables [@montgomery2021introduction] that explain the same variance in the dependent variable and make it challenging to separate the importance of individual variables. It can lead to unstable coefficients and increased type II errors (incorrectly concluding that the variable is not statistically significant), with the standard errors and confidence intervals becoming inflated [@williams2019assumptions]. Diagnosis of multicollinearity includes consideration of the Variance Inflation Factor (VIF) and pairwise correlations and examining changes in the standard error of models [@zuur2010protocol]. VIF measures how much the variance of the estimated parameter is increased due to collinearity, with a rule of thumb of values of 10 indicating a problem [@montgomery2021introduction]. However, Zurr et al. [@zuur2010protocol] suggest that lower values of three can also indicate problematic collinearity. Treatment for multicollinearity may include using alternate methods such as regularisation methods or dropping one of the variables found to be highly correlated [@williams2019assumptions]. Deciding which variables should be removed from the model can be done in several ways, including dropping variables with the highest VIF or preferably using clinical understanding to keep the most important predictors in the model.
+
+
+Results and discussion 
+======================
+  
+  In 2019, 16,318 papers were published in *PLOS ONE*; of these, 1005 (6%) mentioned linear regression in the methods section with health in the subject area. Papers were randomly selected and reviewed for the inclusion criterion until we had 100 papers that used linear regression. Whilst reviewing the paper, the statisticians could exclude papers by indicating no linear regression results reported; this option was provided to reduce the risk of excluding papers with poor reporting. Ten papers were identified as potentially having no linear results; the author team reviewed these papers and excluded five. Therefore, 95 papers were included in the final analysis (Figure 2). For papers with at least one result presented but rated by one statistician not to contain linear regression results, the missing review was replaced by the primary authors’ results for the reliability analysis. 
+
+The majority of the included studies were observational (n=`r round(freq(wide$design) [2,1], 0)`, `r round(freq(wide$design) [2,2], 0)`%), with `r round(freq(wide$design) [1,1], 0)` experimental studies. Human participants were primarily used in `r round(freq(wide$participant_type) [2,2], 0)`% (`r round(freq(wide$participant_type) [2,1], 0)`) of studies, `r round(freq(wide$participant_type) [1,2], 0)`% (`r round(freq(wide$participant_type) [1,1], 0)`) used animals, `r round(freq(wide$participant_type) [4,2], 0)`% (`r round(freq(wide$participant_type) [4,1], 0)`) used other studies, and the remaining `r int_to_words(round(freq(wide$participant_type) [3,1], 0))` studies had either a combination of human, animal, or plants, or were conducted in a lab.
+
+
+ Over half (55%) of statisticians indicated their highest statistical or mathematical education was a PhD, with 28% having a Master's level qualification. Ten percent had honours or bachelor's degrees. One statistician had a diploma, while two others had no formal statistical education. Statisticians were experienced, with 25% having 5-9 years of experience, 30% with 10-19 years, and 23% having 20+ years of experience.  For further information on statistician demographics, see Jones et al. [@jones2024common].
+  
+
+```{r MR, message=FALSE, fig.margin = TRUE, fig.cap="Flow diagram of the included papers reproduced from Jones et al. [@jones2024common]",  out.width = "100%"}
+knitr::include_graphics('figures/Fig2.eps') 
+```
+
+##  Prevalence of statistical reporting behaviours
+Most authors (`r  round (100-freq(wide$pvalues_4) [1,2], 0)`%) used p-values to describe their results, with  `r  round(freq(wide$pvalues_4) [2,1], 0)`  authors mostly reporting p-values categorically. In comparison, `r round(freq(wide$coefficient_4)[2,2],0)`% of authors reported regression coefficients, with less than half reporting either confidence intervals (`r round(freq(wide$ci_4) [2,2], 0)`%) or standard error (`r round(freq(wide$se_4) [2,2], 0)`%).   The total number of observations was only clear in `r round(freq(wide$nobs_4) [2,2], 0)`% of papers (Table 1).   `r capitalize_first_letter(int_to_words(round(freq(wide$transform_4) [2,1], 0)))` of the `r round(freq(wide$transform_4) [2,1]+freq(wide$transform_4) [3,1],0)` studies that transformed their data did not provide any reasoning. Several authors demonstrated poor reporting practices, interchangeably using  correlation coefficients (r), coefficient of determination (R^2^), and regression coefficients  often without interpretation. `r capitalize_first_letter(int_to_words(round(freq(wide$model_4) [1,1], 0)))` percent of researchers were unclear about their modelling choice, with 14% using a recognised modelling approach, with less than half of these papers providing sufficient detail to be reproduced (Table 2). 
+
+
+
+\input{tables/Table1.tex}
+
+
+\input{tables/Table2.tex}
+
+
+## Agreement of statistical raters
+
+There was a high agreement between the two statistical ratings for reporting behaviours, including coefficients, confidence intervals, test statistics, degrees of freedom and measures of uncertainty (Table 3, for full reporting, see S1 Table). However, lower but moderate agreement (Gwet $\ge$ 0.4 to 0.59) was observed for questions requiring interpretation by raters, including the size and direction of parameter estimates, p-values, collinearity, and transformation. Relatively poor agreement was observed for some outcomes, including the importance of parameters, variables scaled appropriately, and any process for selecting the variables included in the final model. Reasons for disagreement included differences in considering what was described in both the text and tables. Raters were sometimes split between unclear and not required. Some disagreement between ratings were also due to the authors' methods sections, which were often unclear. In general,  the two statistical raters had a higher agreement with the final prevalence score (which took into account the third rating conducted by the primary author) than they did with each other, indicating that while there was variability, the overall prevalence was reflective of raters.
+
+\input{tables/Table3.tex}
+
+
+
+
+
+## Comparison of results to other research
+
+Most authors of the papers included in the current study (`r round(freq(wide$coefficient_4)[2,2],0)`%)  reported regression coefficients, however, less than half (`r round(freq(wide$ci_4) [2,2], 0)`%) of authors used confidence intervals or standard errors (`r round(freq(wide$se_4) [2,2], 0)`%)  with `r round(freq(wide$seci_4) [2,2], 0)`%  of papers reporting some measure of uncertainty; `r  round(freq(wide$pvalues_4) [2,2], 0)`% of authors mostly reported p-values categorically, ignoring the widely discussed guidelines on p-values from the American Statistical Association [@wasserstein2016asa].  Poor quality of reporting in published work can be seen across all health research fields [@ioannidis2019have; @nuijten2016prevalence]. A Study by Strasak et al. [@strasak2007use] compared two prominent medical journals, *Nature Medicine* and *The New England Journal of Medicine*, in 2004 for common statistical errors.  In a subset of 53 papers across the two journals,  *The New England Journal of Medicine*, 45% did not report confidence intervals for the main effect, and 19% of articles did not report exact p-values. For *Nature Medicine papers* 95% did not report confidence intervals, and 86% did not report exact p-values.
+
+The results from our *PLOS ONE* sample were that `r round(freq(wide$model_4) [2,2], 0)`%  of studies were univariate, which is a higher use of multivariable modelling than in previously reviewed health literature but in line with the increasing complexity of modelling over time [@strasak2007use]. Real et al. [@real2015use]  examined the use of multiple regression models in observational studies in Spanish scientific journals between 1970 and 2013. They found only 6.1% of the articles included the term multivariable analysis, with increasing frequency reported from 0.1% in 1980 to 12.3% in 2013. Although many model selection methods exist, some are more robust than others. Sun et al.  [@sun1996inappropriate] outline the danger of using univariate analysis with a statistical significance threshold (p < 0.05) as a screening tool for inclusion in multivariable models.  The authors provide examples of simulated and real data where this method ignores confounding and inappropriately excludes important variables, leading to incorrect conclusions about associations. In a review of oncology studies, Mallet et al. [@mallett2010reporting] found that out of 43 studies, 21 (49%) used univariate analysis as a pre-screening test to select variables for multivariable models.  The current research results show a lower proportion of use of the significance threshold as a pre-screen, with `r round(freq(wide$model_4) [4,1], 0)`  out of `r round(freq(wide$modeltype_4)[2,1]+(freq(wide$modeltype_4)[4,1]), 0)` papers that used multivariable modelling identified that they took this approach. While this sounds like a positive result, it is difficult to interpret as `r round(freq(wide$model_4) [1,2], 0)`% of studies were unclear when describing their modelling process, it was often unclear if models were univariate or multivariable. Statistical sections were often generic and difficult to follow, with poor reasoning, with one paper authors describing their model selection as the overfitted model, not understanding that fitting a model with a small sample size with many variables is poor practice. Variable inclusion was based on literature or author knowledge in `r round(freq(wide$model_4) [3,1], 0)` (`r round(freq(wide$model_4) [3,2], 0)`%) papers, generally with very little or no explanation. `r capitalize_first_letter(int_to_words(round(95 - (freq(wide$modelstrat_4) [1,1]), 0)))` (`r round(100 - (freq(wide$modelstrat_4) [1,2]), 0)`%) studies used a recognised modelling strategy; of these, only stepwise methods were used, with `r round(freq(wide$modelsig_4) [3,1], 0)` describing any statistical significance criteria.  
+
+Poor reporting of statistical sections is common in health, with White et al. [@white2022observational] finding that many papers’ content resembled “boilerplate text” cut and pasted from already published work, with often little resemblance to the analyses conducted.  Collyer et al.  [@collyer2024eye] conducted a qualitative study to understand researchers' understanding of linear regression, finding that the interpretation of regression coefficients was described by researchers as iterative and nuanced rather than complete or authoritative statements, which sometimes depended on prior understandings. However, in our study, it was challenging to judge authors understanding as most results were not interpreted, with only `r round(freq(wide$importance_4) [3,1], 0)` (`r round(freq(wide$importance_4) [3,2], 0)`%) author teams properly linking the size of the effect back to the dependent variable, and another `r round(freq(wide$importance_4) [2,1], 0)` (`r round(freq(wide$importance_4) [2,2], 0)`%) doing so generically.
+
+
+Authors rarely check multicollinearity with Vatcheva et al. [@vatcheva2016multicollinearity] searching the epidemiological literature in PubMed from January 2004 to December 2013 and found that only 1 in 100 regression papers mentioned collinearity or multicollinearity. The authors report that when variables are strongly collinear the normal interpretation of a regression coefficient of a change in Y with a one-unit increase in X while holding the other predictors constant becomes practically impossible. They concluded that although the multicollinearity diagnosis does not solve the problem, it is important to understand the impact on findings and allow greater care to be taken when interpreting the regression coefficients [@vatcheva2016multicollinearity]. Norstrom et al.  [@norstrom2015poor] reviewed 41 papers from public health and found that only one article tested for collinearity. Fernandez--Nino and Hernandaz--Montes [@fernandez2018reporting] found that 15% (17/111) of articles in *Biomedica* reported assessing collinearity. Our results confirm that proper checking and reporting of collinearity remains poor, with `r round(freq(wide$collinearity_4) [3,1], 0)` out of `r round(freq(wide$modeltype_4)[2,1]+(freq(wide$modeltype_4)[4,1]), 0)` (`r  round((freq(wide$collinearity_4)[3,1] / (freq(wide$modeltype_4)[2,1] + freq(wide$modeltype_4)[4,1])) * 100, 0)`%) multivariable papers checked for collinearity.
+
+
+## System-wide reform of statistical practices
+
+While blaming individual researchers for poor statistical quality is tempting, our results, which align with previous research [@altman2002statistical], indicate systemic issues in understanding and reporting the broader statistical theory and tolerance of bad behaviour [@pirosca2022tolerating]. This research aims not to name and shame individual researchers for their reporting practices but to understand the magnitude of the problem and help guide the culture change required to improve reporting. The broader purpose of this research is not about the individual researchers but rather the practical implication of arriving at the wrong conclusions when bad statistical practices are used. It is about patients and the impact that potentially ineffective treatments might have. Leek et al. [@leek2015opinion] suggest that if we think of poor research practices as a disease, we should see the review process as medication with the research quality crisis seen from a primary prevention perspective. As in health prevention, editorial review (medication) is the last step and should not be relied on to fix the problems [@leek2015opinion].  Instead, greater investment in prevention strategies such as increasing awareness of issues, increased training and access to qualified methodologists is required to encourage healthy research practices.    
+
+Parallels can be observed between poor statistical practices and addictive behaviours, including obesity, where there is a clear relationship between junk food availability in communities [@corsica2011eating] (seen as obesogenic environments) with the parallel that some journals can be seen as selling junk (quick publication without adequate review), with institutions rewarding quantity over quality (calorie-rich food deficient in nutritional value).  In the same way, telling someone to lose weight won’t solve the obesity crisis; just telling people to do better research or to stop abusing p-values will not solve the statistical quality crisis.  Like an addictive drug, the reward for poor quality research can create a feedback loop; with more publications required to achieve promotion or funding success, the more shortcuts are taken. 
+
+There are complex causes for poor reporting quality observed historically [@chalmers2009avoidable] and in the current study. Many opinion pieces have been written on the topic, as well as primary research targeting particular items of statistical reporting, such as p-values and confidence intervals, which has been limited in improving the interpretation of results [@fidler2004editors; @ioannidis2019have]. There are no easy solutions, and we recommend a system-wide approach to reform statistical practices.  When designing future interventions to tackle poor statistical quality, meta-researchers should incorporate the knowledge from health about behaviour change [@hagger2020known] and complex relationships between individuals and the interplay between interpersonal support systems, the community, the organisation and the policy environment [@bronfenbrenner1977toward]. The social-ecological model proposed by Bronfenbrenner [@bronfenbrenner1977toward] can be adapted to approach system-wide reform of research practices (Table 4).
+
+
+\input{tables/Table4.tex}
+
+
+Without the connections and cooperation of the different levels identified in the social-ecological model [@bronfenbrenner1977toward], real reform improving research quality is unlikely to succeed. Barnett and Byrne [@barnett2023retract] explain a bystander effect currently occurring in research quality, with everyone watching and waiting for someone else to act while the research systems further decline, with publishers expecting institutions to prevent and educate against poor practice, institutions expecting their staff to protect their reputations and for journals to improve the peer review, and funders willing to fund new research but not quality control.  They recommend diverting 1% of publishers’ profits and scientific funding to quality control [@barnett2023retract]. Currently, no time or money is built into the system for research maintenance or quality control.  As seen in preventative health [@NationalPreventiveHealth2021], broad structural change is likely to occur only with investment and policy implementation.  
+
+##  Checklists and automated reviews
+Our findings suggest that while most authors report regression coefficients, they often do not provide any measure of uncertainty around their result, and it can be challenging to identify the specific statistical method used. Journals can improve the quality of statistical reporting by implementing policies that standardise the presentation of statistical results. This could involve including all statistics in tables, whether in the main body of the paper or the supplementary materials, with clear identification of the statistical tests used.  
+
+Many journals require reporting guidelines, including statistical guidelines such as SAMPL [@lang2013basic]. This could be an opportunity for researchers to seek advice and improve statistical methodology. However, the current checklist approach of just providing page numbers instead of details has been criticised, with Blanco et al. [@blanco2018consort] questioning whether checklists submitted by authors reflect the information presented in articles. They randomly selected 12 randomised controlled trials from three journals and found that only one article fully adhered to CONSORT guidelines. They concluded that journals needed action to ensure transparent reporting, including checking the items examined by editors or trained editorial assistants. *PLOS ONE* recommends that authors use SAMPL to provide guiding principles for reporting statistical methods and results and specific instructions for reporting linear regression; our results show that the guidelines are not widely followed.  *PLOS ONE* also recommends the use of STROBE [@von2007strengthening] for observational studies, but our results showed poor reporting of results with papers often lacking detail on whether the study was descriptive, associational, or predictive and a clear statement of what variables were selected and why.  These results support Pouwels et al. [@pouwels2016quality], who concluded that authors should be required to submit the checklist with text excerpted from the manuscript instead of just referring to page numbers.  
+  
+
+When journals introduce new policies, it's important to monitor their value. These policies should not just increase the author and reviewer burden without improving quality. There's a risk that researchers might provide normative responses to checklists rather than focussing on improving overall research quality [@begley2015reproducibility]. This was evident in interventions promoting the better use of confidence intervals, where the impact on interpretation quality was minimal [@fidler2004editors; @hemming2022review]. To reduce this burden on reviewers, it's recommended that journals provide templates of papers with expected results and standard reporting. Reviewers can be provided with interactive checklists, similar to the one used in this research. For example, if reviewers indicate that confidence intervals were not reported, an automated feedback system can educate authors on table formatting and interpretation of results. 
+
+Some readers may ask, can statistical reviews be automated? While this is still a developing field, there have been previous attempts [@schulz2022future], including text mining and *statcheck*, an algorithm designed to scan papers to detect inconsistencies in calculated test statistics, degrees of freedom and their associated p-values [@nuijten2016prevalence].  Roughly half of the papers reviewed had at least one p-value that did not correspond with their associated test statistic and degrees of freedom.  *Statcheck* can only process data with specific APA formatting (e.g. t(36) = 0.099, P = 0.921)  and was found to only process 61% of all statistical tests [@schmidt2017statcheck]. The current study found results were often incomplete and inconsistently formatted, reflecting differing reporting practices across health fields, a current barrier to automation. Therefore, while automated tools are helpful, they can only aid the reviewer, such as helping screen the paper for checklists. Reviewers can then use this information to improve the interpretation of results [@schulz2022future].
+
+
+
+## Involvement of statisticians
+The volume and statistical complexity of most medical research have increased drastically in the last couple of decades, with the use of advanced methods such as survival analysis and multivariable linear regression now commonplace [@altman1998statistical]. Our study confirmed this, with most studies using multiple statistical methods and multivariable analysis. Unfortunately, serious flaws in published work are also commonplace, with Altman et al. [@altman1998statistical] reporting that many of these problems are caused by statistical analyses performed by health professionals with an inadequate understanding of statistical methods. Studies in quality improvement consistently recommend that authors should involve biostatisticians in projects early, enabling well-designed studies with robust interpretation of results [@altman2002statistical]. However, many projects either completely lack involvement from a biostatistician, or they are involved too late to improve study findings effectively. This has been a long-recognised phenomenon across all research fields, with Fisher [@fisher1938presidential] famously saying, "To consult the statistician after an experiment is finished is often merely to ask him to conduct a post-mortem examination. He can perhaps say what the experiment died of". This essentially highlights that no analytical methods can rescue the result once a study has been undertaken with poor design.
+
+Our study highlighted that statistical sections were often generic, emphasising p-values rather than practical importance, with only  (`r round(freq(wide$size_4)[2,2],0)`%) of authors directly interpreting the size of regression coefficients, indicating statistical input may have improved reporting. The use of statistical expertise was examined by Altman et al. [@altman2002statistical], who surveyed the authors of all original research articles submitted to the BMJ and Annals of Internal Medicine over five months in 2001. Authors were asked if studies had statistical or epidemiology input, the stage this occurred and reasons if none was used. Of the 704 authors who responded, 39% (273) of papers had input from a statistician. For the papers with statistical input, 30% of authors identified their first major contribution was at the analysis stage. Of these papers, a third of biostatisticians were not acknowledged for their work. Altman et al. [@altman2002statistical] found that articles without methodological support were more likely to be desk-rejected (71%) than articles with statistical input (57%). A more recent survey by Sebo et al. [@sebo2019statistician] randomly selected 781 articles published in 2016 journals from high-impact medicine and primary care journals and found when a statistician is involved as a co-author, the time to the publication of research is reduced. Mullner et al. [@mullner2002reporting] reviewed 537 papers from medicine and found when statisticians are involved in studies, inadequate reporting of adjustment for confounders drops from 56% to 27%.  While we did not measure the involvement of statisticians in our research, poor reporting was commonplace; statistical reviewers had difficulty identifying if there was a process for selecting variables or even whether there were linear regression results in the paper. Therefore, it is recommended that statisticians be involved early in medical research and be appropriately recognised for their contribution.  While much of the burden of implementing checklists to improve statistical quality falls on journals, we recommend institutions such as universities take responsibility for their paper submissions, stopping the poor research before it gets to the journal. To achieve this goal,  more funding from institutions for central statistical support is required. A report by the NHMRC (Australia’s major funder of health and medical research) on research quality identified *study statistics and analysis as a critical core competency for high quality research*, and noted *statisticians as advisors to/members of ethics committees* as an example of *institutional support that will foster high quality research* [@nhmrc2019].  There have also been broader calls for statisticians to be involved in all medical research, to improve study design and interpretation of results [@zapf2019makes].
+ 
+
+  Post-publication peer review, as conducted by statisticians in the current study, allows for transparent and continuous research evaluation, identifying flaws or errors [@markie2015post]. In an environment where digital technology is the norm, researchers can be given real-time feedback about statistical methods through journal websites, pre-prints and changes made through version control. There is an opportunity to change practice by encouraging researchers to take ownership of their errors, where publications are regarded as the beginning of the journey, and published work is viewed as dynamic ‘living documents’ that can be changed and updated as errors are identified [@shanahan2015living]. For this to occur, both researchers and institutions need to invest in quality over volume, with negative perceptions about paper corrections overcome. 
+
+Limitations
+===========
+
+*PLOS ONE* is a large cross-discipline journal, but may not be representative of all health and biomedical journals. The focus of this study was linear regression, this was purposeful as there will be different misconceptions driving understanding in comparison to ANOVA. We focused on the interpretation of continuous variables, however, we recommend that future questionnaires be seen in a general linear model framework. Initially, the questionnaire contained 55 items and included an interpretation of categorical independent variables but it was removed due to length concerns. However, breaking up the interpretation of coefficients into continuous and categorical, as well as adding if post hoc tests were used, would not compromise length but improve interpretability.
+
+
+
+Conclusions
+===========
+
+Linear regression is one of the most frequently used statistical methods, so researchers should be able to interpret its output. Unfortunately, our research shows that the average researcher tends to over-rely on p-values and significance rather than the contextual importance and robustness of conclusions drawn. This systematic failure in statistical reporting highlights the need for investment in research training and quality control; this should be across the board, from ethics to submission of research to post-peer review, allowing statisticians and other methodological experts to be involved through the entire project cycle.  The research environment is an ecosystem, and future meta-research should consider how the different levels of the system interact, understand the behaviour of individuals, their support systems, the community, organisations, and policy environment, as well as adapt and use established knowledge about behaviour change. Journal policies can achieve improvements in basic reporting, with the recommendation from this study to introduce interactive checklists for authors and reviewers, so when poor reporting occurs, automated feedback with education on how the tables should be formatted and results be interpreted.  Journals could also produce template papers and standardise reporting for commonly used statistical tests. To increase the transparency of reporting, all statistical tests should be put into tables, whether in the main body of the paper or the supplementary materials; it should be clear from tables what test was used and if models are univariate or multivariable. Finally, post-peer review needs to be encouraged, where correcting errors and clarifying research is rewarded rather than punished, and research papers are regarded as living documents with version control; for this to occur, there needs to be a cultural change and investment in how academics and institutions think about academic output, with research maintenance built into roles and shift away from volume to quality of research.
+
+
+
+Supporting Information {.unnumbered}
+======================
+
+\beginsupplement
+
+S1 Table: Full reporting of agreement and reliability for statistical raters.
+
+Acknowledgements
+================
+
+We acknowledge all the statisticians (named and not named) who kindly gave up their time to contribute to this publication by reviewing papers, including: Ingrid Aulike,	Peter Baker,	Brigid Betz-Stablein,	Enrique Bustamante,	Taya Collyer,	Susanna Cramb,	Alanah Cronin,	Laura Delaney,	Zoe Dettrick,	Eralda Gjika Dhamo,	Des FitzGerald,	Peter Geelan-Small,	Edward Gosden,	Alison Griffin,	Jenine Harris,	Cameron Hurst,	Kyle James,	Helen Johnson,	Jessica Kasza,	Karen Lamb,	Stacey Llewellyn,	James Martin,	Miranda Mortlock,	Satomi Okano,	Alan Rigby,	Michael Steele,	Megan Steele,	Jacqueline Thompson,	Simon Turner,	Michael Waller,	Kevin Wang,	Jace Warren,	Natasha Weaver,	Lachlan Webb,	and Janet Williams.
+
+# Funding
+There was no cost associated with this research except for attending conferences. These costs were covered by the primary author's PhD allocation from the health faculty, Queensland University of Technology, and scholarships. The Statistical Society of Australia (SSA) and the Association for Interdisciplinary Meta-research & Open Science (AIMOS) supported the primary author with travel grants to attend their respective conferences. These scholarships did not influence the results of the study.
+
+
+# Competing Interests
+The authors declare there are no competing interests.
+
+# Data Availability
+The raw data and a reproducible R Quarto file used to produce this paper, including all tables and figures have been stored in a GitHub repository and can be accessed at [ref]
+
+
+# Author Contributions
+\noindent  \textbf{Conceptualization:} Lee Jones, Adrian Barnett, Dimitrios Vagenas. \
+\noindent  \textbf{Data Curation:} Lee Jones. \
+\noindent  \textbf{Formal Analysis:} Lee Jones.\
+\noindent  \textbf{Funding Acquisition:} Lee Jones.\
+\noindent  \textbf{Investigation:} Lee Jones.\
+\noindent  \textbf{Methodology:} Lee Jones, Adrian Barnett, Dimitrios Vagenas. \
+\noindent  \textbf{Project Administration:} Lee Jones, Dimitrios Vagenas.\
+\noindent  \textbf{Resources:} Dimitrios Vagenas.\
+\noindent  \textbf{Software:} Lee Jones.\
+\noindent  \textbf{Supervision:} Adrian Barnett, Dimitrios Vagenas. \
+\noindent  \textbf{Validation:} Adrian Barnett, Dimitrios Vagenas. \
+\noindent  \textbf{Visualization:} Lee Jones. \
+\noindent  \textbf{Writing – Original Draft Preparation:} Lee Jones. \
+\noindent  \textbf{Writing – review \& editing:} Lee Jones, Adrian Barnett, Dimitrios Vagenas.
+
+
+
+
+
+

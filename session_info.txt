@@ -1,0 +1,62 @@
+R version 4.3.3 (2024-02-29 ucrt)
+Platform: x86_64-w64-mingw32/x64 (64-bit)
+Running under: Windows 11 x64 (build 22621)
+
+Matrix products: default
+
+
+locale:
+[1] LC_COLLATE=English_Australia.utf8  LC_CTYPE=English_Australia.utf8   
+[3] LC_MONETARY=English_Australia.utf8 LC_NUMERIC=C                      
+[5] LC_TIME=English_Australia.utf8    
+
+time zone: Australia/Brisbane
+tzcode source: internal
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+ [1] conflicted_1.2.0   car_3.1-2          carData_3.0-5      gtsummary_1.7.2   
+ [5] rlist_0.4.6.2      DescTools_0.99.52  PropCIs_0.3-0      formatR_1.14      
+ [9] bookdown_0.37      xtable_1.8-4       irrCAC_1.0         officer_0.6.5     
+[13] flextable_0.9.5    summarytools_1.0.1 lubridate_1.9.3    forcats_1.0.0     
+[17] stringr_1.5.1      dplyr_1.1.4        purrr_1.0.2        readr_2.1.4       
+[21] tidyr_1.3.0        tibble_3.2.1       ggplot2_3.4.4      tidyverse_2.0.0   
+[25] knitr_1.45        
+
+loaded via a namespace (and not attached):
+  [1] gld_2.6.6               tcltk_4.3.3             readxl_1.4.3           
+  [4] rlang_1.1.2             magrittr_2.0.3          matrixStats_1.1.0      
+  [7] e1071_1.7-13            compiler_4.3.3          systemfonts_1.0.5      
+ [10] vctrs_0.6.5             reshape2_1.4.4          httpcode_0.3.0         
+ [13] pkgconfig_2.0.3         crayon_1.5.2            fastmap_1.1.1          
+ [16] backports_1.4.1         magick_2.8.1            ellipsis_0.3.2         
+ [19] pander_0.6.5            utf8_1.2.4              promises_1.2.1         
+ [22] rmarkdown_2.25          psychTools_2.3.9        tzdb_0.4.0             
+ [25] ragg_1.2.6              bit_4.0.5               xfun_0.41              
+ [28] cachem_1.0.8            jsonlite_1.8.7          later_1.3.1            
+ [31] uuid_1.1-1              pryr_0.1.6              parallel_4.3.3         
+ [34] R6_2.5.1                stringi_1.8.2           boot_1.3-29            
+ [37] cellranger_1.1.0        Rcpp_1.0.11             base64enc_0.1-3        
+ [40] httpuv_1.6.12           Matrix_1.6-4            timechange_0.2.0       
+ [43] tidyselect_1.2.0        abind_1.4-5             rstudioapi_0.15.0      
+ [46] yaml_2.3.7              sjlabelled_1.2.0        codetools_0.2-19       
+ [49] curl_5.1.0              lattice_0.22-5          plyr_1.8.9             
+ [52] shiny_1.8.0             withr_2.5.2             askpass_1.2.0          
+ [55] evaluate_0.23           foreign_0.8-86          proxy_0.4-27           
+ [58] zip_2.3.0               xml2_1.3.5              pillar_1.9.0           
+ [61] checkmate_2.3.0         insight_0.19.8          generics_0.1.3         
+ [64] vroom_1.6.4             hms_1.1.3               munsell_0.5.0          
+ [67] scales_1.3.0            rootSolve_1.8.2.4       class_7.3-22           
+ [70] glue_1.6.2              gdtools_0.3.7           lmom_3.0               
+ [73] tools_4.3.3             gfonts_0.2.0            data.table_1.14.8      
+ [76] Exact_3.2               mvtnorm_1.2-4           rapportools_1.1        
+ [79] grid_4.3.3              colorspace_2.1-0        cli_3.6.1              
+ [82] textshaping_0.3.7       fontBitstreamVera_0.1.1 fansi_1.0.5            
+ [85] expm_0.999-8            broom.helpers_1.14.0    gt_0.10.0              
+ [88] gtable_0.3.4            digest_0.6.33           fontquiver_0.2.1       
+ [91] crul_1.4.0              memoise_2.0.1           htmltools_0.5.7        
+ [94] lifecycle_1.0.4         httr_1.4.7              mime_0.12              
+ [97] bit64_4.0.5             fontLiberation_0.1.0    openssl_2.1.1          
+[100] MASS_7.3-60.0.1        
