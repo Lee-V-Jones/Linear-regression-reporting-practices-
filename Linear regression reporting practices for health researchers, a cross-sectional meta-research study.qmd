@@ -864,7 +864,7 @@ There was no cost associated with this research except for attending conferences
 The authors declare there are no competing interests.
 
 # Data Availability
-The raw data and a reproducible R Quarto file used to produce this paper, including all tables and figures have been stored in a GitHub repository and can be accessed at [ref]
+The raw data and a reproducible R Quarto file used to produce this paper, including all tables and figures have been stored in a GitHub repository and can be accessed at [@lee_jones_2024_11312961]
 
 
 # Author Contributions
